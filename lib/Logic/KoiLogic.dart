@@ -1,4 +1,5 @@
 import 'package:flutter_koukoi/Type/BoundedStack.dart';
+import 'KoiLogicEngine.dart';
 import 'KoiLogicObserver.dart';
 import 'KoiLogicStrategy.dart';
 
@@ -141,6 +142,44 @@ class KoiLogic<T>{
     return !_undoHistory.isEmpty;
   }
   //end---implementasi design pattern command🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖
+
+  //start-implementasi design pattern chain of responsibility🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝
+  List<KoiLogicEngine<T>> _listEngine = [];
+  void engineAdd(KoiLogicEngine<T> engine){
+    _listEngine.add(engine);
+  }
+
+  List<KoiLogicEngine<T>> _executionQueue = [];
+  Future<void> _executeEngineStream() async{
+    List<KoiLogicEngine<T>> nextExecution = [];
+    for (var enEngine in _executionQueue) {
+      await enEngine.execute(this);
+
+      for (var anNextEngine in enEngine.nextEngine) {
+        anNextEngine.origin = enEngine.origin;
+      }
+
+      nextExecution.addAll(enEngine.nextEngine);
+    }
+    //todo masih salah, harusnya cuma clear yang originnya sama
+    _executionQueue.clear();
+    _executionQueue.addAll(nextExecution);
+  }
+  Future<void> engineStart(KoiLogicEngine<T> targetEngine) async {
+
+    targetEngine.origin = targetEngine;
+    _executionQueue.add(targetEngine);
+
+    while(_executionQueue.isNotEmpty){
+      await _executeEngineStream();
+    }
+  }
+  //todo masih belum ada jaminan semua engine bakal stop pas panggil ini
+  //todo mungkin bagusan buat pause all engine?
+  void engineStopAll(){
+    _executionQueue.clear();
+  }
+  //end---implementasi design pattern chain of responsibility🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝🥝
 }
 
 // todo find a way to store state more efficient([previous] and [next])
