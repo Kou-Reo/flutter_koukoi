@@ -1,7 +1,7 @@
+import 'package:example/KoiLive/ExKoiLive.dart';
 import 'package:flutter/material.dart';
 
-import 'ExKoiLogicCommand.dart';
-import 'ExKoiLogicStrategy.dart';
+import 'KoiLogic/ExKoiLogicCommand.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,7 +20,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const ExKoiLogicCommand(),
+      home: const ExKoiLive(),
     );
   }
 }
