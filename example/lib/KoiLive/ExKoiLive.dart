@@ -12,24 +12,16 @@ class ExKoiLive extends StatefulWidget {
 
 class _ExKoiLiveState extends State<ExKoiLive> {
 
-  KoiLive<String> _data = KoiLive();
-
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    _data.resultTransformer = ((realData){
-      return KoiLiveResult(
-          status: KoiLiveResultStatus.Success,
-          message: 'request sukse dilakukan',
-          errors: [],
-          data: realData.body
-      );
-    });
-    _data.request(()async{
-      return http.get(Uri.parse('http://localhost/my_web/mobileApp/public/api/test'));
-    });
-  }
+  KoiLive<String> _data = KoiLive.run(request: ()async{
+    return http.get(Uri.parse('http://localhost/my_web/mobileApp/public/api/test'));
+  }, resultTransformer: (realData){
+    return KoiLiveResult(
+        status: KoiLiveResultStatus.Success,
+        message: 'request sukse dilakukan',
+        errors: [],
+        data: realData.body
+    );
+  });
 
 
   @override
@@ -43,7 +35,7 @@ class _ExKoiLiveState extends State<ExKoiLive> {
             }),
           )),
 
-          ElevatedButton(onPressed: (){_data.reload();}, child: Text("Reload"))
+          ElevatedButton(onPressed: (){_data.runRequest();}, child: Text("Reload"))
         ],
       ),
     );

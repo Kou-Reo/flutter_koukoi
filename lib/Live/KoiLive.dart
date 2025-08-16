@@ -8,8 +8,25 @@ import 'KoiLiveResult.dart';
 import 'KoiLiveWg.dart';
 
 class KoiLive<T>{
+  /// sebelum pakai harus masukkan isi [request()] dan [resultTransformer()] lebih dulu
+  ///
+  /// kalau gak mau isi [request()] dan [resultTransformer()], pakai [KoiLive.run()]
+  KoiLive();
+  KoiLive.run({required Future<dynamic> Function() request, required this.resultTransformer}){
+    this._request = request;
+    this.runRequest();
+  }
 
   KoiLogic<KoiLiveResult<T>> _data = KoiLogic(KoiLiveResult(status: KoiLiveResultStatus.Loading, message: '', errors: []));
+  /// last data yang di download disimpan di sini
+  ///
+  /// kalau mau render widget lebih bagus pakai [render()] karena ada fitur observer
+  T? get data{
+    if(_data.data.data != null){
+      return _data.data.data;
+    }
+    return null;
+}
 
   Widget Function() renderOnLoad = (){
     return CircularProgressIndicator();
@@ -26,14 +43,15 @@ class KoiLive<T>{
   void Function(KoiLogic<T?>) onWarning = (data){};
   void Function(KoiLogic<T?>) onInfo = (data){};
 
-  Future<dynamic> Function()? _lastRequest;
-  Future<KoiLive<T>> request(Future<dynamic> Function() requestFn) async {
+  Future<dynamic> Function()? _request;
+  Future<KoiLive<T>> runRequest() async {
     setStatus(KoiLiveResultStatus.Loading);
 
-    // store the function, not the result
-    _lastRequest = requestFn;
+    if(_request == null){
+      throw UnimplementedError("KoiLive.request belum diimplementasikan");
+    }
 
-    var waitRequest = await requestFn();
+    var waitRequest = await _request!();
 
     try{
       this._data.data = this.resultTransformer(waitRequest);
@@ -44,15 +62,7 @@ class KoiLive<T>{
     return this;
   }
 
-  /// kalo mau request ulang tanpa perlu ngetik request lagi. akan menjalankan perintah request terakhir
-  Future<KoiLive<T>> reload()async{
-    if(_lastRequest != null){
-      return await request(_lastRequest!);
-    }
-
-    throw AssertionError("Belum pernah ada request. Buat request dengan  fungsi request()");
-  }
-
+  /// misalnya kan hasil request dari api itu json. bisa pakai ini untuk ubah hasil request dari json sesuai dengan tipe <T>
   KoiLiveResult<T> Function(dynamic) resultTransformer = (realResult){
     throw UnimplementedError("KoiLive.resultTransformer belum diimplementasikan");
   };
