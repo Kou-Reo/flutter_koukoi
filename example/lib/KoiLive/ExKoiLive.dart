@@ -35,7 +35,7 @@ class _ExKoiLiveState extends State<ExKoiLive> {
             }),
           )),
 
-          ElevatedButton(onPressed: (){_data.runRequest();}, child: Text("Reload"))
+          ElevatedButton(onPressed: (){_data.requestRun();}, child: Text("Reload"))
         ],
       ),
     );
