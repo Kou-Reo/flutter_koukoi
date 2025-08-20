@@ -4,7 +4,9 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class KoiHttp {
-  KoiHttp({String? baseUrl, required this.path}) : _baseUrl = baseUrl;
+  KoiHttp({String? baseUrl, String? baseFallbackUrl, required this.path})
+      : _baseUrl = baseUrl,
+        _baseFallbackUrl = baseFallbackUrl;
 
   //start-url🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗
   static String? BaseUrl;
@@ -24,6 +26,34 @@ class KoiHttp {
   String? get url {
     String buildUrl =
         "${baseUrl?.replaceAll(RegExp(r'/+$'), '') ?? ""}/${path?.replaceAll(RegExp(r'^/+'), '') ?? ""}";
+
+    if (param != null) {
+      buildUrl = "${buildUrl}?${param}";
+    }
+
+    final uri = Uri.tryParse(buildUrl);
+    if (uri != null && uri.hasScheme && uri.hasAuthority) {
+      // url valid, bisa di return
+      return buildUrl;
+    }
+
+    throw Exception("url: ${buildUrl} tidak valid");
+  }
+
+  //end---url🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗
+
+  //start-url🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗🔗
+  static String? BaseFallbackUrl;
+  String? _baseFallbackUrl;
+
+  String? get baseFallbackUrl => _baseFallbackUrl ?? BaseFallbackUrl;
+
+  /// sama dengan [url] tapi mengendung url backup
+  ///
+  /// misalnya [url] tidak bisa dihubungi, maka library ini akan mengulangi request tapi ke [fallbackUrl]
+  String? get fallbackUrl {
+    String buildUrl =
+        "${baseFallbackUrl?.replaceAll(RegExp(r'/+$'), '') ?? ""}/${path?.replaceAll(RegExp(r'^/+'), '') ?? ""}";
 
     if (param != null) {
       buildUrl = "${buildUrl}?${param}";
@@ -125,6 +155,7 @@ class KoiHttp {
     ret.addAll(_form_file);
     return ret;
   }
+
   Map<String, String> get form_data_without_file {
     Map<String, String> ret = {};
     ret.addAll(_Form_Data);
@@ -134,11 +165,13 @@ class KoiHttp {
 
   List<http.MultipartFile> get form_data_just_file {
     List<http.MultipartFile> ret = [];
-    KoiHttp._Form_File.forEach((key, val){
-      ret.add(http.MultipartFile.fromBytes(key, val.readAsBytesSync(), filename: val.path.split('/').last));
+    KoiHttp._Form_File.forEach((key, val) {
+      ret.add(http.MultipartFile.fromBytes(key, val.readAsBytesSync(),
+          filename: val.path.split('/').last));
     });
-    _form_file.forEach((key, val){
-      ret.add(http.MultipartFile.fromBytes(key, val.readAsBytesSync(), filename: val.path.split('/').last));
+    _form_file.forEach((key, val) {
+      ret.add(http.MultipartFile.fromBytes(key, val.readAsBytesSync(),
+          filename: val.path.split('/').last));
     });
 
     return ret;
@@ -151,7 +184,7 @@ class KoiHttp {
   Map<String, String> get x_www_form_urlencoded {
     Map<String, String> ret = {};
     ret.addAll(_X_www_form_urlencoded);
-    ret.addAll(x_www_form_urlencoded);
+    ret.addAll(_x_www_form_urlencoded);
     return ret;
   }
 
@@ -186,117 +219,141 @@ class KoiHttp {
   _BodyAdd get addBody {
     return _BodyAdd(mainClass: this, isStatic: false);
   }
+
   //end---addBody🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰🤰
 
   //start-send request🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝
 
-  Future<http.Response> sendPost(){
+  Future<http.Response> sendPost() {
     // kalo body bertipe form-data(ada file), kirim multipart request
     // selain itu kirim request biasa
-    if(form_data.isNotEmpty){
-      return _sendMultipartRequest(_RequestMethod.POST);
+    if (form_data.isNotEmpty) {
+      return _sendMultipartRequest(url, _RequestMethod.POST);
     }
-    return _sendRequest(_RequestMethod.POST);
-  }
-  Future<http.Response> sendGet(){
-    return _sendRequest(_RequestMethod.GET);
-  }
-  Future<http.Response> sendDelete(){
-    // kalo body bertipe form-data(ada file), kirim multipart request
-    // selain itu kirim request biasa
-    if(form_data.isNotEmpty){
-      return _sendMultipartRequest(_RequestMethod.DELETE);
-    }
-    return _sendRequest(_RequestMethod.DELETE);
-  }
-  Future<http.Response> sendHead(){
-    return _sendRequest(_RequestMethod.HEAD);
-  }
-  Future<http.Response> sendPatch(){
-    // kalo body bertipe form-data(ada file), kirim multipart request
-    // selain itu kirim request biasa
-    if(form_data.isNotEmpty){
-      return _sendMultipartRequest(_RequestMethod.PATCH);
-    }
-    return _sendRequest(_RequestMethod.PATCH);
-  }
-  Future<http.Response> sendPut(){
-    // kalo body bertipe form-data(ada file), kirim multipart request
-    // selain itu kirim request biasa
-    if(form_data.isNotEmpty){
-      return _sendMultipartRequest(_RequestMethod.PUT);
-    }
-    return _sendRequest(_RequestMethod.PUT);
+    return _sendRequest(url, _RequestMethod.POST);
   }
 
-  Future<http.Response> _sendRequest(_RequestMethod requestMethod)async{
+  Future<http.Response> sendGet() {
+    return _sendRequest(url, _RequestMethod.GET);
+  }
 
+  Future<http.Response> sendDelete() {
+    // kalo body bertipe form-data(ada file), kirim multipart request
+    // selain itu kirim request biasa
+    if (form_data.isNotEmpty) {
+      return _sendMultipartRequest(url, _RequestMethod.DELETE);
+    }
+    return _sendRequest(url, _RequestMethod.DELETE);
+  }
+
+  Future<http.Response> sendHead() {
+    return _sendRequest(url, _RequestMethod.HEAD);
+  }
+
+  Future<http.Response> sendPatch() {
+    // kalo body bertipe form-data(ada file), kirim multipart request
+    // selain itu kirim request biasa
+    if (form_data.isNotEmpty) {
+      return _sendMultipartRequest(url, _RequestMethod.PATCH);
+    }
+    return _sendRequest(url, _RequestMethod.PATCH);
+  }
+
+  Future<http.Response> sendPut() {
+    // kalo body bertipe form-data(ada file), kirim multipart request
+    // selain itu kirim request biasa
+    if (form_data.isNotEmpty) {
+      return _sendMultipartRequest(url, _RequestMethod.PUT);
+    }
+    return _sendRequest(url, _RequestMethod.PUT);
+  }
+
+  Future<http.Response> _sendRequest(String? urlRequest, _RequestMethod requestMethod) async {
     //start-periksa apa request valid🚲
-    if(url == null){
+    if (urlRequest == null) {
       throw AssertionError("tidak ada url dimasukkan");
     }
-    List<_RequestMethod> requestTanpaBody = [_RequestMethod.GET, _RequestMethod.HEAD];
-    if(requestTanpaBody.contains(requestMethod) && x_www_form_urlencoded.isNotEmpty && raw != null){
-      throw AssertionError("${requestMethod.name} request tidak bisa punya body. gunakan query untuk mengirim data ke server");
+    List<_RequestMethod> requestTanpaBody = [
+      _RequestMethod.GET,
+      _RequestMethod.HEAD
+    ];
+    if (requestTanpaBody.contains(requestMethod) &&
+        x_www_form_urlencoded.isNotEmpty &&
+        raw != null) {
+      throw AssertionError(
+          "${requestMethod.name} request tidak bisa punya body. gunakan query untuk mengirim data ke server");
     }
     //end---periksa apa request valid🚲
 
-    // build url
-    var uri = Uri.parse(url!);
+    dynamic err = null;
+    try {
+      // build url
+      var uri = Uri.parse(urlRequest);
 
-    // send request
-    if(requestMethod == _RequestMethod.POST){
-      return await http.post(
-        uri,
-        headers: header,
-        body: raw ?? x_www_form_urlencoded,
-      );
-    }
-    else if(requestMethod == _RequestMethod.DELETE){
-      return await http.delete(
-        uri,
-        headers: header,
-        body: raw ?? x_www_form_urlencoded,
-      );
-    }
-    else if(requestMethod == _RequestMethod.GET){
-      return await http.get(
-        uri,
-        headers: header
-      );
-    }
-    else if(requestMethod == _RequestMethod.HEAD){
-      return await http.head(
+      // send request
+      if (requestMethod == _RequestMethod.POST) {
+        return await http.post(
           uri,
-          headers: header
-      );
+          headers: header,
+          body: raw ?? x_www_form_urlencoded,
+        );
+      } else if (requestMethod == _RequestMethod.DELETE) {
+        return await http.delete(
+          uri,
+          headers: header,
+          body: raw ?? x_www_form_urlencoded,
+        );
+      } else if (requestMethod == _RequestMethod.GET) {
+        return await http.get(uri, headers: header);
+      } else if (requestMethod == _RequestMethod.HEAD) {
+        return await http.head(uri, headers: header);
+      } else if (requestMethod == _RequestMethod.PATCH) {
+        return await http.patch(
+          uri,
+          headers: header,
+          body: raw ?? x_www_form_urlencoded,
+        );
+      } else if (requestMethod == _RequestMethod.PUT) {
+        return await http.put(
+          uri,
+          headers: header,
+          body: raw ?? x_www_form_urlencoded,
+        );
+      }
+    } on SocketException catch (e) {
+      print('Primary URL network error (SocketException): $e. Falling back...');
+      err = e;
+    } on http.ClientException catch (e) {
+      print('Primary URL client error (ClientException): $e. Falling back...');
+      err = e;
+    } on HttpException catch (e) {
+      print('Primary URL HTTP error (HttpException): $e. Falling back...');
+      err = e;
+    } catch (e) {
+      print('An unexpected error occurred with primary URL: $e. Falling back...');
+      err = e;
     }
-    else if(requestMethod == _RequestMethod.PATCH){
-      return await http.patch(
-        uri,
-        headers: header,
-        body: raw ?? x_www_form_urlencoded,
-      );
+
+    if(err != null && fallbackUrl != urlRequest){
+      return await _sendRequest(fallbackUrl, requestMethod);
     }
-    else if(requestMethod == _RequestMethod.PUT){
-      return await http.put(
-        uri,
-        headers: header,
-        body: raw ?? x_www_form_urlencoded,
-      );
+
+    if(err != null){
+      return http.Response('Error: $err', 500);
     }
 
     throw AssertionError("request method ini belum diimplementasikan");
   }
-  Future<http.Response> _sendMultipartRequest(_RequestMethod requestMethod)async{
 
-    if(url == null){
+  Future<http.Response> _sendMultipartRequest(String? urlRequest, _RequestMethod requestMethod) async {
+    if (urlRequest == null) {
       throw AssertionError("tidak ada url dimasukkan");
     }
 
-    try{
+    dynamic err = null;
+    try {
       // build url
-      var uri = Uri.parse(url!);
+      var uri = Uri.parse(urlRequest);
       var request = http.MultipartRequest(requestMethod.name, uri);
 
       // build header
@@ -315,15 +372,28 @@ class KoiHttp {
         headers: response.headers,
         request: response.request,
       );
+    } on SocketException catch (e) {
+      print('Primary URL network error (SocketException): $e. Falling back...');
+      err = e;
+    } on http.ClientException catch (e) {
+      print('Primary URL client error (ClientException): $e. Falling back...');
+      err = e;
+    } on HttpException catch (e) {
+      print('Primary URL HTTP error (HttpException): $e. Falling back...');
+      err = e;
+    } catch (e) {
+      print('An unexpected error occurred with primary URL: $e. Falling back...');
+      err = e;
     }
-    catch (e) {
-      // Handle any exceptions.
-      print('An error occurred: $e');
-      // Return a dummy error response or rethrow the exception.
-      return http.Response('Error: $e', 500);
+
+    if(err != null && fallbackUrl != urlRequest){
+      // send request ke fallback url
+      return await _sendMultipartRequest(fallbackUrl, requestMethod);
     }
+
+    return http.Response('Error: $err', 500);
   }
-  //end---send request🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝
+//end---send request🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝🚝
 }
 
 class _BodyAdd {
@@ -334,26 +404,26 @@ class _BodyAdd {
       : _mainClass = mainClass,
         _isStatic = isStatic;
 
-  void removeFormData() {
+  void _removeFormData() {
     KoiHttp._Form_Data.clear();
     KoiHttp._Form_File.clear();
     _mainClass._form_data.clear();
     _mainClass._form_file.clear();
   }
 
-  void removeXWwwFormUrlencoded() {
+  void _removeXWwwFormUrlencoded() {
     KoiHttp._X_www_form_urlencoded.clear();
     _mainClass._x_www_form_urlencoded.clear();
   }
 
-  void removeRaw() {
+  void _removeRaw() {
     KoiHttp._Raw = null;
     KoiHttp._Raw_Type = null;
     _mainClass._raw = null;
     _mainClass._raw_Type = null;
   }
 
-  KoiHttp formData(String key, {String? value, File? file}) {
+  KoiHttp addFormData(String key, {String? value, File? file}) {
     //clear data lain kek xWwwFormUrlencoded
 
     if (value == null && file == null) {
@@ -381,13 +451,13 @@ class _BodyAdd {
       }
     }
 
-    removeRaw();
-    removeXWwwFormUrlencoded();
+    _removeRaw();
+    _removeXWwwFormUrlencoded();
 
     return _mainClass;
   }
 
-  KoiHttp xWwwFormUrlencoded(String key, String value) {
+  KoiHttp addXWwwFormUrlencoded(String key, String value) {
     if (_isStatic) {
       KoiHttp._X_www_form_urlencoded[key] = value;
     } else {
@@ -395,13 +465,13 @@ class _BodyAdd {
     }
 
     //clear data lain kek formData
-    removeRaw();
-    removeFormData();
+    _removeRaw();
+    _removeFormData();
 
     return _mainClass;
   }
 
-  KoiHttp raw({String? text, Map<String, dynamic>? json}) {
+  KoiHttp addRaw({String? text, Map<String, dynamic>? json}) {
     if (text == null && json == null) {
       throw AssertionError("text atau json harus ada salah satunya");
     } else if (text != null && json != null) {
@@ -429,8 +499,8 @@ class _BodyAdd {
       throw AssertionError("tipe body ini belum diimpleentasikan");
     }
 
-    removeXWwwFormUrlencoded();
-    removeFormData();
+    _removeXWwwFormUrlencoded();
+    _removeFormData();
 
     return _mainClass;
   }
